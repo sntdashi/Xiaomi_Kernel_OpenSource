@@ -16,31 +16,38 @@ jobs:
 
       - name: Clone Kernel Source
         run: |
-          # Pake repo Poco F6 yang support GKI (Cari yang branch android14-6.1)
           git clone --depth=1 https://github.com/MiCode/Xiaomi_Kernel_OpenSource.git -b peridot-u-oss kernel-source
-      - name: Inject KernelSU Next
-        run: |
-          cd kernel-source
-          # Command sakti buat narik KernelSU Next langsung ke source
-          curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s next
-          
+
       - name: Unlock KVM & AVF
         run: |
           cd kernel-source
-          # Masuk ke folder config GKI
+          # Masuk ke folder config GKI (Ini harus sebelum compile)
           CONF="arch/arm64/configs/gki_defconfig"
           echo "CONFIG_VIRTUALIZATION=y" >> $CONF
           echo "CONFIG_KVM=y" >> $CONF
           echo "CONFIG_KVM_ARM_HOST=y" >> $CONF
           echo "CONFIG_VHOST_NET=y" >> $CONF
-          # Tambahan buat KSU Next agar lancar
-          echo "CONFIG_KSU=y" >> $CONF
           echo "CONFIG_OVERLAY_FS=y" >> $CONF
+          echo "Pintunya udah dibuka bang!"
+
+      - name: Inject KernelSU Next
+        run: |
+          cd kernel-source
+          # Tarik KSU Next
+          curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s next
+          
+          # TRIK SAKTI: Hapus baris yang manggil hwid/Kconfig karena filenya ga ada di repo
+          # Kita pake '|| true' biar kalo barisnya ga ketemu, build ga stop
+          sed -i '/hwid\/Kconfig/d' drivers/misc/Kconfig || true
+          echo "Baris bermasalah di Kconfig udah dibabat!"
 
       - name: Build Kernel (GKI Mode)
         run: |
           cd kernel-source
+          # 1. Generate config dari GKI yang udah di-patch tadi
           make O=out ARCH=arm64 CC=clang LLVM=1 LLVM_IAS=1 gki_defconfig
+          
+          # 2. Hajar compile!
           make O=out ARCH=arm64 CC=clang LLVM=1 LLVM_IAS=1 -j$(nproc --all)
 
       - name: Upload Image
