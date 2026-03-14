@@ -21,14 +21,21 @@ jobs:
       - name: Unlock KVM & AVF
         run: |
           cd kernel-source
-          # Masuk ke folder config GKI (Ini harus sebelum compile)
           CONF="arch/arm64/configs/gki_defconfig"
+          # Unlock KVM
           echo "CONFIG_VIRTUALIZATION=y" >> $CONF
           echo "CONFIG_KVM=y" >> $CONF
           echo "CONFIG_KVM_ARM_HOST=y" >> $CONF
           echo "CONFIG_VHOST_NET=y" >> $CONF
+          
+          # MATIIN BTF (Biar nggak error pahole lagi)
+          echo "CONFIG_DEBUG_INFO_BTF=n" >> $CONF
+          echo "CONFIG_DEBUG_INFO_BTF_MODULES=n" >> $CONF
+          
+          # Tambahan KSU
+          echo "CONFIG_KSU=y" >> $CONF
           echo "CONFIG_OVERLAY_FS=y" >> $CONF
-          echo "Pintunya udah dibuka bang!"
+          echo "BTF dimatiin, KVM digas!"
 
       - name: Inject KernelSU Next
         run: |
